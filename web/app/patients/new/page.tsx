@@ -1,5 +1,6 @@
 "use client";
 
+import type { FlagSuggestion } from "@/app/api/suggest-flags/route";
 import type { PatientCreateRequest } from "@/lib/api/patients";
 import { useCreatePatient } from "@/lib/hooks/usePatients";
 import type { PatientStatus, SexAtBirth } from "@/types/patient";
@@ -35,6 +36,54 @@ export default function AddPatientPage() {
   const { mutate: createPatient, isPending, isError, error } = useCreatePatient();
   const [form, setForm] = useState<PatientCreateRequest>(emptyForm);
   const [flagInput, setFlagInput] = useState("");
+  const [suggestions, setSuggestions] = useState<FlagSuggestion[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  async function suggestFlags() {
+    if (!form.firstName || !form.lastName || !form.dob || !form.status) {
+      setSuggestError("Fill in first name, last name, date of birth and status before requesting suggestions.");
+      return;
+    }
+    setSuggestError(null);
+    setIsSuggesting(true);
+    setSuggestions([]);
+    try {
+      const res = await fetch("/api/suggest-flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
+          dob: form.dob,
+          sexAtBirth: form.sexAtBirth,
+          status: form.status,
+          primaryProvider: form.primaryProvider,
+          existingFlags: form.flags,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Unknown error");
+      setSuggestions((data.suggestions as FlagSuggestion[]).filter(
+        (s) => !form.flags.includes(s.flag)
+      ));
+    } catch (err) {
+      setSuggestError(err instanceof Error ? err.message : "Could not fetch suggestions.");
+    } finally {
+      setIsSuggesting(false);
+    }
+  }
+
+  function acceptSuggestion(flag: string) {
+    if (!form.flags.includes(flag)) {
+      set("flags", [...form.flags, flag]);
+    }
+    setSuggestions((prev) => prev.filter((s) => s.flag !== flag));
+  }
+
+  function dismissSuggestion(flag: string) {
+    setSuggestions((prev) => prev.filter((s) => s.flag !== flag));
+  }
 
   function set<K extends keyof PatientCreateRequest>(
     key: K,
@@ -165,8 +214,76 @@ export default function AddPatientPage() {
 
         {/* Flags */}
         <Card>
-          <Title>Clinical Flags <span className="text-slate-400 text-sm font-normal">(optional)</span></Title>
+          <div className="flex items-center justify-between">
+            <Title>Clinical Flags <span className="text-slate-400 text-sm font-normal">(optional)</span></Title>
+            <button
+              type="button"
+              onClick={suggestFlags}
+              disabled={isSuggesting}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSuggesting ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Thinking…
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347A3.75 3.75 0 0112 15.75a3.75 3.75 0 01-2.797-1.253l-.347-.347z" />
+                  </svg>
+                  Suggest with AI
+                </>
+              )}
+            </button>
+          </div>
           <Divider className="mt-2 mb-4" />
+
+          {/* AI suggestions */}
+          {suggestError && (
+            <p className="text-xs text-red-600 mb-3">{suggestError}</p>
+          )}
+          {suggestions.length > 0 && (
+            <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-md">
+              <p className="text-xs font-semibold text-violet-700 mb-2">AI suggestions — click to accept</p>
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((s) => (
+                  <div key={s.flag} className="group relative">
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 bg-white text-violet-700 border border-violet-300 rounded cursor-default"
+                      title={s.reason}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => acceptSuggestion(s.flag)}
+                        className="hover:text-violet-900 transition-colors"
+                        aria-label={`Accept suggestion: ${s.flag}`}
+                      >
+                        + {s.flag}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => dismissSuggestion(s.flag)}
+                        className="text-violet-400 hover:text-violet-700 transition-colors ml-0.5"
+                        aria-label={`Dismiss suggestion: ${s.flag}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                    {/* Reason tooltip */}
+                    <div className="hidden group-hover:block absolute bottom-full left-0 mb-1.5 z-10 w-48 bg-slate-900 text-white text-xs rounded px-2 py-1.5 shadow-lg pointer-events-none">
+                      {s.reason}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <TextInput
               className="flex-1"
