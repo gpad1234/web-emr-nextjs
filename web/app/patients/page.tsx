@@ -1,7 +1,8 @@
 "use client";
 
 import { usePatients } from "@/lib/hooks/usePatients";
-import type { PatientStatus } from "@/types/patient";
+import type { Patient, PatientStatus } from "@/types/patient";
+import type { AcuityResult } from "@/app/api/acuity-score/route";
 import {
     Badge,
     Card,
@@ -19,13 +20,21 @@ import {
     Title,
 } from "@tremor/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const statusColor: Record<PatientStatus, "red" | "amber" | "emerald" | "slate"> = {
   critical: "red",
   recovering: "amber",
   stable: "emerald",
   discharged: "slate",
+};
+
+const acuityStyle: Record<number, { label: string; className: string }> = {
+  1: { label: "1", className: "bg-red-600 text-white" },
+  2: { label: "2", className: "bg-orange-500 text-white" },
+  3: { label: "3", className: "bg-yellow-400 text-slate-900" },
+  4: { label: "4", className: "bg-blue-100 text-blue-800" },
+  5: { label: "5", className: "bg-slate-100 text-slate-500" },
 };
 
 function formatDate(iso: string) {
@@ -44,6 +53,9 @@ function age(dob: string) {
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [acuityMap, setAcuityMap] = useState<Record<string, AcuityResult>>({});
+  const [isScoring, setIsScoring] = useState(false);
+  const [scoringError, setScoringError] = useState<string | null>(null);
 
   const { data, isLoading, isError } = usePatients({
     search: search || undefined,
@@ -51,6 +63,28 @@ export default function PatientsPage() {
   });
 
   const patients = data?.items ?? [];
+
+  const scoreAcuity = useCallback(async () => {
+    if (patients.length === 0) return;
+    setIsScoring(true);
+    setScoringError(null);
+    try {
+      const res = await fetch("/api/acuity-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patients }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      const map: Record<string, AcuityResult> = {};
+      for (const r of (json.results as AcuityResult[])) map[r.patientId] = r;
+      setAcuityMap(map);
+    } catch (e: unknown) {
+      setScoringError(e instanceof Error ? e.message : "Scoring failed");
+    } finally {
+      setIsScoring(false);
+    }
+  }, [patients]);
 
   return (
     <div className="p-8 space-y-6">
@@ -67,16 +101,45 @@ export default function PatientsPage() {
             </p>
           )}
         </div>
-        <Link
-          href="/patients/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Patient
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={scoreAcuity}
+            disabled={isScoring || isLoading || patients.length === 0}
+            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isScoring ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Scoring…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347A3.75 3.75 0 0112 15.75a3.75 3.75 0 01-2.797-1.253l-.347-.347z" />
+                </svg>
+                Score Acuity
+              </>
+            )}
+          </button>
+          <Link
+            href="/patients/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Patient
+          </Link>
+        </div>
       </div>
+      {scoringError && (
+        <p className="text-xs text-red-600">{scoringError}</p>
+      )}
 
       {/* Filters */}
       <Flex className="gap-3" justifyContent="start">
@@ -149,6 +212,11 @@ export default function PatientsPage() {
                 <TableHeaderCell className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
                   Flags
                 </TableHeaderCell>
+                {Object.keys(acuityMap).length > 0 && (
+                  <TableHeaderCell className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                    Acuity
+                  </TableHeaderCell>
+                )}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -209,6 +277,24 @@ export default function PatientsPage() {
                         )}
                       </div>
                     </TableCell>
+                    {Object.keys(acuityMap).length > 0 && (
+                      <TableCell>
+                        {acuityMap[patient.id] ? (
+                          <div className="group relative inline-block">
+                            <span
+                              className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${acuityStyle[acuityMap[patient.id].score]?.className ?? ""}`}
+                            >
+                              {acuityMap[patient.id].score}
+                            </span>
+                            <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-10 w-52 bg-slate-900 text-white text-xs rounded px-2 py-1.5 shadow-lg pointer-events-none">
+                              {acuityMap[patient.id].rationale}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}

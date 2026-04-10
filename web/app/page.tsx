@@ -1,6 +1,7 @@
 "use client";
 
 import { usePatients } from "@/lib/hooks/usePatients";
+import type { CensusInsight } from "@/app/api/census-insights/route";
 import {
     AreaChart,
     Badge,
@@ -17,6 +18,7 @@ import {
     Title,
 } from "@tremor/react";
 import Link from "next/link";
+import { useState, useCallback } from "react";
 
 const weeklyAdmissions = [
   { day: "Mon", Admissions: 6 },
@@ -43,12 +45,35 @@ const timeline = [
 
 export default function DashboardPage() {
   const { data, isLoading } = usePatients();
+  const [insights, setInsights] = useState<CensusInsight[]>([]);
+  const [isAnalysing, setIsAnalysing] = useState(false);
+  const [insightError, setInsightError] = useState<string | null>(null);
 
   const patients = data?.items ?? [];
   const total = data?.total ?? 0;
   const critical = patients.filter((p) => p.status === "critical").length;
   const recovering = patients.filter((p) => p.status === "recovering").length;
   const stable = patients.filter((p) => p.status === "stable").length;
+
+  const analyseCensus = useCallback(async () => {
+    if (patients.length === 0) return;
+    setIsAnalysing(true);
+    setInsightError(null);
+    try {
+      const res = await fetch("/api/census-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patients }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      setInsights(json.insights as CensusInsight[]);
+    } catch (e: unknown) {
+      setInsightError(e instanceof Error ? e.message : "Analysis failed");
+    } finally {
+      setIsAnalysing(false);
+    }
+  }, [patients]);
 
   return (
     <div className="p-8 space-y-6">
@@ -172,6 +197,75 @@ export default function DashboardPage() {
           </List>
         </Card>
       </Grid>
+
+      {/* AI Census Insights */}
+      <Card>
+        <Flex justifyContent="between" alignItems="center">
+          <div>
+            <Title>AI Census Insights</Title>
+            <Text className="text-slate-400 text-xs mt-0.5">Pattern analysis across all patients</Text>
+          </div>
+          <button
+            type="button"
+            onClick={analyseCensus}
+            disabled={isAnalysing || isLoading || patients.length === 0}
+            className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isAnalysing ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Analysing…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347A3.75 3.75 0 0112 15.75a3.75 3.75 0 01-2.797-1.253l-.347-.347z" />
+                </svg>
+                Analyse Census
+              </>
+            )}
+          </button>
+        </Flex>
+        <Divider />
+
+        {insightError && (
+          <p className="text-xs text-red-600 mb-3">{insightError}</p>
+        )}
+
+        {!isAnalysing && insights.length === 0 && !insightError && (
+          <p className="text-sm text-slate-400 text-center py-6">
+            Click &ldquo;Analyse Census&rdquo; to surface patterns and risks across all {total} patients.
+          </p>
+        )}
+
+        {insights.length > 0 && (
+          <div className="space-y-3">
+            {insights.map((insight, i) => {
+              const styles = {
+                critical: { bar: "bg-red-500", bg: "bg-red-50 border-red-200", text: "text-red-700", badge: "red" as const },
+                warning:  { bar: "bg-amber-400", bg: "bg-amber-50 border-amber-200", text: "text-amber-700", badge: "amber" as const },
+                info:     { bar: "bg-blue-400", bg: "bg-blue-50 border-blue-200", text: "text-blue-700", badge: "blue" as const },
+              }[insight.severity];
+              return (
+                <div key={i} className={`flex gap-3 p-3 border rounded-md ${styles.bg}`}>
+                  <div className={`w-1 flex-shrink-0 rounded-full ${styles.bar}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge color={styles.badge} size="xs">{insight.severity}</Badge>
+                      <p className={`text-sm font-semibold ${styles.text}`}>{insight.headline}</p>
+                    </div>
+                    <p className="text-xs text-slate-600">{insight.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
 
       {/* Today's timeline */}
       <Card>
