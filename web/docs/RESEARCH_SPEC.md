@@ -185,6 +185,7 @@ Can the platform support a subgroup-aware screening analyzer that identifies ele
 1. A South Asian-specific analyzer will flag elevated diabetes risk earlier than a generic rule-based screening baseline.
 2. Waist-centric and metabolic-risk features may be more informative than BMI alone for this subgroup.
 3. A tailored analyzer may improve clinician acceptance if outputs are concise, transparent, and framed as screening prompts rather than diagnoses.
+4. Measures related to beta-cell dysfunction, glycemia, liver fat, and central adiposity may outperform BMI-only screening logic in this subgroup.
 
 ### 8.5 Candidate analyzer outputs
 
@@ -207,6 +208,8 @@ This track should not start with ethnicity alone. It should use explicit, versio
 | `central_adiposity_v1` | waist circumference, waist-height ratio, BMI, age |
 | `metabolic_screen_v1` | HbA1c, fasting glucose, triglycerides, HDL, blood pressure |
 | `lifestyle_context_v1` | physical activity, diet pattern, sleep, smoking |
+| `body_composition_v1` | liver fat proxy, lean mass proxy, visceral adiposity proxy, BMI |
+| `social_context_v1` | household structure, family support, exercise partner context, acculturation profile |
 
 ### 8.7 Research constraints
 
@@ -215,6 +218,7 @@ This track should not start with ethnicity alone. It should use explicit, versio
 - Outputs must be benchmarked against a non-ethnicity-aware baseline.
 - Model performance must be evaluated separately for false positives, false negatives, and clinician acceptance.
 - Regional burden statistics should justify study prioritization, not override patient-level evidence.
+- Broad labels such as "Asian" must not be used as a substitute for subgroup-specific data; South Asian subgroup disaggregation is part of the research requirement.
 
 ### 8.8 Suggested first experiment
 
@@ -227,11 +231,29 @@ First pass:
 3. Capture whether clinicians judge the subgroup-aware prompts as earlier, clearer, or more useful.
 4. Log prompt version, model version, and dataset snapshot for every run.
 
-### 8.9 Literature direction captured for this spec
+### 8.9 MASALA-informed feature priorities
+
+The MASALA literature suggests this track should go beyond a simple ethnicity-plus-BMI heuristic.
+
+Priority feature families:
+
+- glycemia across the spectrum, not only diagnosed diabetes
+- beta-cell dysfunction proxies where available
+- central adiposity and liver fat proxies rather than BMI alone
+- severe hyperglycemia subtype indicators
+- cardiometabolic comorbidity context, especially ASCVD risk
+- modifiable behavior context such as diet quality, sedentary time, and physical activity
+- interpersonal context such as family/social network support for behavior change
+
+This also supports a broader design principle for the platform: research analyzers should be able to combine biologic, behavioral, and social-context variables rather than only static demographics.
+
+### 8.10 Literature direction captured for this spec
 
 The initial rationale for this track is based on repeated findings that South Asian populations may develop type 2 diabetes at younger ages and lower BMI, with higher insulin resistance, central adiposity, and beta-cell dysfunction relative to many comparator groups. This should be treated as a research hypothesis driver for analyzer design and evaluation, not as a shortcut for automated patient-level conclusions.
 
 The regional burden framing in this spec also incorporates IDF South-East Asia Atlas data showing rapid growth, high underdiagnosis, and substantial mismatch between disease burden and expenditure. That context supports the importance of earlier, more tailored screening research while still requiring strict validation at the patient level.
+
+Recent longitudinal MASALA findings further strengthen this track by showing higher diabetes prevalence and incidence, lower insulin secretion, greater insulin resistance, more adverse body composition, and a higher proportion of severe hyperglycemia subtype among South Asians than comparator U.S. groups. The paper also points toward multilevel modifiable factors including diet quality, exercise, sedentary behavior, social networks, acculturation, neighborhood context, and environmental exposures. Those findings support a research design that is explicitly multilevel rather than purely phenotype-based.
 
 ---
 
@@ -313,3 +335,10 @@ This platform is research-ready when:
 3. Add a lightweight JSONL run log writer for all AI endpoints.
 4. Add a short `Research Operations` section to deployment docs.
 5. Define a first synthetic cohort for `south-asian-diabetes-screening-v1`.
+
+---
+
+## 13. Source Notes
+
+- IDF Diabetes Atlas, South-East Asia regional page: burden, projected growth, underdiagnosis, and pregnancy hyperglycaemia context.
+- Kanaya AM. Diabetes in South Asians: Uncovering Novel Risk Factors With Longitudinal Epidemiologic Data. Diabetes Care 2024;47(1):7-16. DOI: 10.2337/dci23-0068.
