@@ -136,10 +136,83 @@ This creates a reliable dataset for offline analysis and publication.
 3. Data minimization mandatory: send only fields required for each analyzer.
 4. Prompt/model versioning mandatory: no unversioned prompt in production runs.
 5. Auditability mandatory: every accepted AI output must be attributable.
+6. Protected-attribute controls mandatory: ethnicity, ancestry, language, and related demographic variables may be used only in explicitly approved research protocols and must never be used for silent automated decisioning.
 
 ---
 
-## 8. Proposed Repository Structure
+## 8. Priority Research Track: South Asian Early Diabetes Risk
+
+One strong early research extension is a subgroup-sensitive diabetes risk workflow focused on South Asian populations.
+
+### 8.1 Why this is a strong research target
+
+The literature consistently reports that South Asian populations have:
+
+- Higher type 2 diabetes prevalence
+- Earlier disease onset
+- Higher insulin resistance at lower BMI
+- Greater visceral adiposity and central obesity despite lower overall BMI
+- Faster progression from prediabetes to diabetes in some cohorts
+
+This makes the problem well-suited for a research analyzer that tests whether standard screening thresholds underperform for this subgroup.
+
+### 8.2 Research question
+
+Can the platform support a subgroup-aware screening analyzer that identifies elevated diabetes risk in South Asian patients earlier than standard age and BMI thresholds, while preserving fairness, auditability, and clinician oversight?
+
+### 8.3 Candidate hypotheses
+
+1. A South Asian-specific analyzer will flag elevated diabetes risk earlier than a generic rule-based screening baseline.
+2. Waist-centric and metabolic-risk features may be more informative than BMI alone for this subgroup.
+3. A tailored analyzer may improve clinician acceptance if outputs are concise, transparent, and framed as screening prompts rather than diagnoses.
+
+### 8.4 Candidate analyzer outputs
+
+Example structured outputs for this track:
+
+| Output | Description |
+|---|---|
+| `screening_prompt` | Suggest HbA1c / fasting glucose screening earlier than default threshold |
+| `risk_rationale` | Explain the subgroup-specific pattern in one sentence |
+| `risk_band` | Low / Moderate / High research risk tier |
+| `follow_up_recommendation` | Suggest follow-up screening interval or counseling prompt |
+
+### 8.5 Candidate input adapters
+
+This track should not start with ethnicity alone. It should use explicit, versioned adapters such as:
+
+| Adapter | Included fields |
+|---|---|
+| `demographics_bmi_v1` | age, sex, BMI, ancestry/ethnicity, family history |
+| `central_adiposity_v1` | waist circumference, waist-height ratio, BMI, age |
+| `metabolic_screen_v1` | HbA1c, fasting glucose, triglycerides, HDL, blood pressure |
+| `lifestyle_context_v1` | physical activity, diet pattern, sleep, smoking |
+
+### 8.6 Research constraints
+
+- This must be a screening-support workflow, not a diagnostic workflow.
+- Any ethnicity-aware logic must remain visible to the clinician and explicitly documented in the rationale.
+- Outputs must be benchmarked against a non-ethnicity-aware baseline.
+- Model performance must be evaluated separately for false positives, false negatives, and clinician acceptance.
+
+### 8.7 Suggested first experiment
+
+`experiment_id`: `south-asian-diabetes-screening-v1`
+
+First pass:
+
+1. Use synthetic or de-identified cohort samples.
+2. Compare generic screening prompts vs subgroup-aware prompts.
+3. Capture whether clinicians judge the subgroup-aware prompts as earlier, clearer, or more useful.
+4. Log prompt version, model version, and dataset snapshot for every run.
+
+### 8.8 Literature direction captured for this spec
+
+The initial rationale for this track is based on repeated findings that South Asian populations may develop type 2 diabetes at younger ages and lower BMI, with higher insulin resistance, central adiposity, and beta-cell dysfunction relative to many comparator groups. This should be treated as a research hypothesis driver for analyzer design and evaluation, not as a shortcut for automated patient-level conclusions.
+
+---
+
+## 9. Proposed Repository Structure
 
 ```text
 web/
@@ -147,14 +220,18 @@ web/
     analyzers/
       acuity/
       census/
+      diabetes-risk/
     adapters/
       demographics.ts
       demographics_flags.ts
+      metabolic_screen.ts
     prompts/
       acuity/
         v1.txt
         v2.txt
       census/
+        v1.txt
+      diabetes-risk/
         v1.txt
     schemas/
       analyzer-output.schema.json
@@ -168,7 +245,7 @@ Note: this structure is a target for next implementation steps; it does not requ
 
 ---
 
-## 9. Phased Plan
+## 10. Phased Plan
 
 ### Phase 1: Reproducibility Foundation
 
@@ -195,7 +272,7 @@ Note: this structure is a target for next implementation steps; it does not requ
 
 ---
 
-## 10. Success Criteria
+## 11. Success Criteria
 
 This platform is research-ready when:
 
@@ -206,9 +283,10 @@ This platform is research-ready when:
 
 ---
 
-## 11. Immediate Next Actions
+## 12. Immediate Next Actions
 
 1. Mark current release as `baseline-v1` in docs and tags.
 2. Add `experiment_id`, `run_id`, and `prompt_version` to all existing AI route responses.
 3. Add a lightweight JSONL run log writer for all AI endpoints.
 4. Add a short `Research Operations` section to deployment docs.
+5. Define a first synthetic cohort for `south-asian-diabetes-screening-v1`.
