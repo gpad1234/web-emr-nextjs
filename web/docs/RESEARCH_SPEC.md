@@ -156,17 +156,37 @@ The literature consistently reports that South Asian populations have:
 
 This makes the problem well-suited for a research analyzer that tests whether standard screening thresholds underperform for this subgroup.
 
-### 8.2 Research question
+### 8.2 Regional burden context
+
+The South-East Asia regional burden reinforces why this track is worth prioritizing.
+
+Key IDF Atlas figures for the South-East Asia region:
+
+- 106.9 million adults aged 20–79 were estimated to be living with diabetes in 2024
+- 184.5 million adults are projected by 2050, a 73% increase
+- Regional diabetes prevalence is projected to reach 13.2% by 2050
+- 42.7% of diabetes cases are undiagnosed, one of the highest proportions globally
+- 27.8% of pregnancies are affected by hyperglycaemia, the highest proportion among IDF regions
+- The region accounts for 18.2% of people with diabetes worldwide but only 1% of global diabetes-related health expenditure
+
+Research implication:
+
+- earlier identification matters
+- underdiagnosis is itself a research target
+- subgroup-sensitive screening may have more value in low-detection settings than in already well-screened populations
+- pregnancy-related and intergenerational risk should remain in scope for future extension work
+
+### 8.3 Research question
 
 Can the platform support a subgroup-aware screening analyzer that identifies elevated diabetes risk in South Asian patients earlier than standard age and BMI thresholds, while preserving fairness, auditability, and clinician oversight?
 
-### 8.3 Candidate hypotheses
+### 8.4 Candidate hypotheses
 
 1. A South Asian-specific analyzer will flag elevated diabetes risk earlier than a generic rule-based screening baseline.
 2. Waist-centric and metabolic-risk features may be more informative than BMI alone for this subgroup.
 3. A tailored analyzer may improve clinician acceptance if outputs are concise, transparent, and framed as screening prompts rather than diagnoses.
 
-### 8.4 Candidate analyzer outputs
+### 8.5 Candidate analyzer outputs
 
 Example structured outputs for this track:
 
@@ -177,7 +197,7 @@ Example structured outputs for this track:
 | `risk_band` | Low / Moderate / High research risk tier |
 | `follow_up_recommendation` | Suggest follow-up screening interval or counseling prompt |
 
-### 8.5 Candidate input adapters
+### 8.6 Candidate input adapters
 
 This track should not start with ethnicity alone. It should use explicit, versioned adapters such as:
 
@@ -188,14 +208,15 @@ This track should not start with ethnicity alone. It should use explicit, versio
 | `metabolic_screen_v1` | HbA1c, fasting glucose, triglycerides, HDL, blood pressure |
 | `lifestyle_context_v1` | physical activity, diet pattern, sleep, smoking |
 
-### 8.6 Research constraints
+### 8.7 Research constraints
 
 - This must be a screening-support workflow, not a diagnostic workflow.
 - Any ethnicity-aware logic must remain visible to the clinician and explicitly documented in the rationale.
 - Outputs must be benchmarked against a non-ethnicity-aware baseline.
 - Model performance must be evaluated separately for false positives, false negatives, and clinician acceptance.
+- Regional burden statistics should justify study prioritization, not override patient-level evidence.
 
-### 8.7 Suggested first experiment
+### 8.8 Suggested first experiment
 
 `experiment_id`: `south-asian-diabetes-screening-v1`
 
@@ -206,9 +227,11 @@ First pass:
 3. Capture whether clinicians judge the subgroup-aware prompts as earlier, clearer, or more useful.
 4. Log prompt version, model version, and dataset snapshot for every run.
 
-### 8.8 Literature direction captured for this spec
+### 8.9 Literature direction captured for this spec
 
 The initial rationale for this track is based on repeated findings that South Asian populations may develop type 2 diabetes at younger ages and lower BMI, with higher insulin resistance, central adiposity, and beta-cell dysfunction relative to many comparator groups. This should be treated as a research hypothesis driver for analyzer design and evaluation, not as a shortcut for automated patient-level conclusions.
+
+The regional burden framing in this spec also incorporates IDF South-East Asia Atlas data showing rapid growth, high underdiagnosis, and substantial mismatch between disease burden and expenditure. That context supports the importance of earlier, more tailored screening research while still requiring strict validation at the patient level.
 
 ---
 
