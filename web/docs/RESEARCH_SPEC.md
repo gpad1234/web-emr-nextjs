@@ -342,3 +342,78 @@ This platform is research-ready when:
 
 - IDF Diabetes Atlas, South-East Asia regional page: burden, projected growth, underdiagnosis, and pregnancy hyperglycaemia context.
 - Kanaya AM. Diabetes in South Asians: Uncovering Novel Risk Factors With Longitudinal Epidemiologic Data. Diabetes Care 2024;47(1):7-16. DOI: 10.2337/dci23-0068.
+
+---
+
+## 14. Proposal: Small-Step Research Extension Plan
+
+This proposal defines how to advance the application in tightly scoped, research-oriented increments.
+
+### 14.1 Proposal objective
+
+Transform the current AI-enabled EMR into a reproducible clinical research platform without major product rewrites.
+
+### 14.2 Scope boundaries
+
+- In scope: reproducibility infrastructure, experiment governance, evaluation workflows, and subgroup-sensitive screening research support.
+- Out of scope: autonomous diagnosis, treatment recommendation automation, and unreviewed direct write-back of AI outputs.
+
+### 14.3 Operating principle
+
+Each cycle changes one variable only (prompt, adapter, threshold, or analyzer logic), then compares outcomes against a fixed baseline.
+
+### 14.4 Workstreams
+
+1. Reproducibility foundation
+- Add run metadata envelope to all AI endpoints.
+- Version prompts and analyzers.
+- Tie every run to commit SHA and dataset snapshot.
+
+2. Evaluation pipeline
+- Maintain fixed synthetic/de-identified cohorts.
+- Run baseline vs variant A/B experiments.
+- Generate compact metric summaries (consistency, latency, clinician acceptance proxy).
+
+3. Governance and safety
+- Keep human-in-the-loop constraints enforced.
+- Validate all AI response schemas server-side.
+- Enforce protected-attribute controls and subgroup disaggregation policy.
+
+4. Priority pilot track
+- Execute `south-asian-diabetes-screening-v1` as first pilot.
+- Compare generic screening prompts vs subgroup-aware prompts.
+- Capture acceptance and rationale quality feedback.
+
+### 14.5 Deliverables by small step
+
+1. Baseline lock package
+- Baseline tag, baseline metrics, and run protocol.
+
+2. Metadata plumbing
+- `experiment_id`, `run_id`, `prompt_version`, `dataset_snapshot`, and `code_commit_sha` returned and logged for all AI routes.
+
+3. Cohort and prompt assets
+- Synthetic cohort v1 and versioned prompt files under the research folder structure.
+
+4. A/B harness
+- Repeatable script/report comparing baseline and one variant.
+
+5. Human feedback capture
+- Simple accepted/rejected plus optional reason for each output unit.
+
+6. Weekly decision note
+- Keep/modify/retire decision with evidence links.
+
+### 14.6 Success criteria for proposal execution
+
+- Reproducible: any run is replayable from metadata.
+- Comparable: each experiment changes one variable.
+- Auditable: all outputs are attributable and logged.
+- Safe: clinician approval remains mandatory.
+
+### 14.7 Suggested 4-week cadence
+
+- Week 1: baseline lock and metadata envelope.
+- Week 2: synthetic cohort and prompt A/B harness.
+- Week 3: feedback capture and first clinician review cycle.
+- Week 4: pilot evaluation report and next-track decision.
